@@ -41,6 +41,19 @@ class CorrelationFunction:
             tt+=1
         return out
 
+    #Return a new Correlation function containing data satisfying a condition based on the coordinate, input as a lambda (or single argument function)
+    #e.g. cor.subset(lambda c : True if c >= fit_start and c <= fit_end else False)
+    def subset(self, where_lambda):
+        keep = []
+        for i in range(self.size()):
+            if where_lambda(self.coord(i)) == True:
+                keep.append(i)
+        out = CorrelationFunction(len(keep))
+        for i in range(len(keep)):
+            out.setCoord(i, self.coord(keep[i]))
+            out.setValue(i, self.value(keep[i]))  
+        return out
+    
     #Generic fold routine. 
     #The data is symmetric as   C(Lt - fold_offset - t) ~ C(t) 
     #e.g. fold_offset should be  2*tsep_pipi  for pipi2pt,   tsep_pipi  for pipi->sigma and 0 for sigma 2pt
@@ -59,3 +72,10 @@ class CorrelationFunction:
         mu = np.array([ self.value(i).mean() for i in range(self.size()) ])
         sigma = np.array([ self.value(i).standardError() for i in range(self.size()) ])
         return x,mu,sigma
+
+    def __str__(self):
+        out = ""
+        for i in range(self.size()):
+            out += str(self.coord(i)) + " : " + str(self.value(i)) + "\n"
+        return out
+    

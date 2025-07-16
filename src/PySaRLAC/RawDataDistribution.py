@@ -26,6 +26,15 @@ class RawDataDistribution:
         out.samples = self.samples + r.samples
         return out
 
+    def __imul__(self,r):
+        if isinstance(r, (float,np.float64)):
+            self.samples *= r
+        elif isinstance(r, RawDataDistribution):
+            self.samples *= r.samples
+        else:
+            assert 0, "Unexpected type" + str(type(r))
+        return self #why???
+    
     def __truediv__(self, r):
         if(isinstance(r,float)):
             out = copy.deepcopy(self)
