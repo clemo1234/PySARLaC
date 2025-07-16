@@ -19,12 +19,15 @@ class CorrelationFunction:
         return self.values[t]
 
     #Return a CorrelationFunction that has been resampled to the provided type
-    def resample(self, dist_type):
+    def resample(self, dist_type, resample_args=None):
         Lt = self.size()
         out = CorrelationFunction(Lt)
         for t in range(Lt):
             out.setCoord(t, self.coord(t))
-            out.setValue(t, dist_type(self.value(t)))
+            if resample_args != None:
+                out.setValue(t, dist_type(self.value(t),resample_args))
+            else:
+                out.setValue(t, dist_type(self.value(t)))
         return out
 
     #Return a new CorrelationFunction containing data in the specified index range

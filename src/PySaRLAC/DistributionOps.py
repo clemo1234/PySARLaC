@@ -1,5 +1,6 @@
 from .JackknifeDistribution import *
 from .DoubleJackknifeDistribution import *
+from .BootJackknifeDistribution import *
 from .CorrelationFunction import *
 
 #Covariance of the means. covariance(a,a) == a.standardError()**2
@@ -11,8 +12,8 @@ def covariance(a, b):
         avg_b = b.mean()
         v = np.dot( (a.sampleVector()-avg_a), (b.sampleVector()-avg_b) )        
         return v*float(N-1)/float(N);
-    elif isinstance(a,DoubleJackknifeDistribution) and isinstance(b,DoubleJackknifeDistribution):
-        out = JackknifeDistribution(a.size())
+    elif type(a) == type(b) and isinstance(a,(DoubleJackknifeDistribution,BootJackknifeDistribution)):
+        out = type(a[0])(a.size())
         for s in range(a.size()):
             out[s] = covariance(a[s],b[s])
         return out
