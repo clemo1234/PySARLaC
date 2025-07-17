@@ -79,3 +79,17 @@ class CorrelationFunction:
             out += str(self.coord(i)) + " : " + str(self.value(i)) + "\n"
         return out
     
+    #Covariance *matrix* of the means
+    @staticmethod
+    def covariance(a,b):
+        assert type(a) == type(b) and isinstance(a, CorrelationFunction)
+        valueType = type(a.value(0))
+        
+        T = a.size()
+        out = [[None for _ in range(T)] for _ in range(T)]
+        for t1 in range(T):
+            for t2 in range(t1+1):
+                out[t1][t2] = valueType.covariance(a.value(t1),b.value(t2))
+                if t1 != t2:
+                    out[t2][t1] = out[t1][t2]
+        return out

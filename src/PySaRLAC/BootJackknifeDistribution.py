@@ -42,3 +42,12 @@ class BootJackknifeDistribution:
         for b in range(nboot):
             rens = RawDataDistribution(raw.sampleVector()[ rtable[b][:] ])
             self.samples[b].resample(rens)
+            
+    #Covariance of the means. covariance(a,a) == a.standardError()**2
+    @staticmethod
+    def covariance(a,b):
+        assert type(a) == type(b) and isinstance(a,BootJackknifeDistribution)
+        out = BootstrapDistribution(a.size())
+        for s in range(a.size()):
+            out[s] = JackknifeDistribution.covariance(a[s],b[s])
+        return out

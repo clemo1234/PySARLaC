@@ -53,3 +53,14 @@ class JackknifeDistribution:
         mu = raw.mean()
         self.samples = (n*mu - raw.sampleVector())/(n-1)
 
+    #Covariance of the means. covariance(a,a) == a.standardError()**2
+    @staticmethod
+    def covariance(a,b):
+        assert type(a) == type(b) and isinstance(a,JackknifeDistribution)
+        N=a.size()
+        avg_a = a.mean()
+        avg_b = b.mean()
+        v = np.dot( (a.sampleVector()-avg_a), (b.sampleVector()-avg_b) )        
+        return v*float(N-1)/float(N);
+
+        

@@ -50,3 +50,12 @@ class DoubleJackknifeDistribution:
                 self.samples[i][jj] = (sumr - raw[i] - raw[j])*num
                 jj+=1
             assert jj == n-1
+                
+    #Covariance of the means. covariance(a,a) == a.standardError()**2            
+    @staticmethod
+    def covariance(a,b):
+        assert type(a) == type(b) and isinstance(a,DoubleJackknifeDistribution)
+        out = JackknifeDistribution(a.size())
+        for s in range(a.size()):
+            out[s] = JackknifeDistribution.covariance(a[s],b[s])
+        return out

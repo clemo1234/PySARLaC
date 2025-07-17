@@ -11,8 +11,8 @@ class Fitter:
         self.cov = None
         self.fitfunc = fitfunc
 
-    def generateCovarianceMatrix(self, cor):
-        self.cov = covariance(cor,cor)
+    def generateCovarianceMatrix(self, cor: CorrelationFunction):
+        self.cov = CorrelationFunction.covariance(cor,cor)
 
     def fit(self, params, cor):
         assert self.cov != None
