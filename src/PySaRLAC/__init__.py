@@ -1,6 +1,7 @@
 from .RawDataDistribution import *
 from .JackknifeDistribution import *
 from .DoubleJackknifeDistribution import *
+from .BlockDoubleJackknifeDistribution import *
 from .BootstrapDistribution import *
 from .BootJackknifeDistribution import *
 from .DistributionOps import *

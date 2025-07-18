@@ -14,7 +14,8 @@ class Fitter:
     def generateCovarianceMatrix(self, cor: CorrelationFunction):
         self.cov = CorrelationFunction.covariance(cor,cor)
 
-    def fit(self, params, cor):
+    #kwargs are passed to curve_fit
+    def fit(self, params, cor, **kwargs):
         assert self.cov != None
         n = cor.value(0).size()
         T = cor.size()
@@ -46,7 +47,7 @@ class Fitter:
             ff = lambda xx,*pp : self.fitfunc.value(xx,pp)
             dd = lambda xx,*pp : self.fitfunc.deriv(xx,pp)
             
-            r = opt.curve_fit(ff, sx, sy, p0=pguess, sigma=scov, jac=dd, absolute_sigma=True,  full_output=True) #
+            r = opt.curve_fit(ff, sx, sy, p0=pguess, sigma=scov, jac=dd, absolute_sigma=True,  full_output=True, method='lm', **kwargs) #
             for p in range(nparams):
                 params[p][s] = r[0][p]
             
