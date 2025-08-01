@@ -9,3 +9,4 @@ from .CorrelationFunction import *
 from .Fit import *
 from .FitFunc import *
 from .EffectiveMass import *
+from .GEVP import *
