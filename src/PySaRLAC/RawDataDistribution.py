@@ -74,4 +74,10 @@ class RawDataDistribution:
     def randomGaussian(self,mu,sigma):
         for i in range(self.size()):
             self[i] = random.gauss(mu,sigma)
-            
+
+    #Output an array of moving window averages of the specified width
+    def movingAvg(self,width):
+        out = []
+        for i in range(width,len(self.samples)):        
+            out.append( np.mean(self.samples[i-width:i]) )
+        return out
