@@ -79,9 +79,9 @@ class CorrelationFunction:
         return out
 
     #Product the x-axis, y-axis and y-error for plotting purposes
-    def plotInputs(self):
-        x = np.array([self.coord(i) for i in range(self.size()) if self.value(i) is not None ])
-        mu = np.array([(self.value(i)).mean() for i in range(self.size()) if self.value(i) is not None ])
+    def plotInputs(self, x_offset = 0.0, y_offset = 0.0):
+        x = np.array([self.coord(i) + x_offset for i in range(self.size()) if self.value(i) is not None ])
+        mu = np.array([(self.value(i)).mean() + y_offset for i in range(self.size()) if self.value(i) is not None ])
         sigma = np.array([ self.value(i).standardError() for i in range(self.size()) if self.value(i) is not None ])
         return x,mu,sigma
 
