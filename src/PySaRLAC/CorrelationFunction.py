@@ -17,6 +17,18 @@ class CorrelationFunction:
         self.values[t] = v
     def value(self,t):
         return self.values[t]
+    
+    def __mul__(self, scalar):
+        if isinstance(scalar, (int, float)):
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                out.setValue(t, self.values[t]*scalar)
+                out.setCoord(t, t)
+            return out
+        else:
+            raise(TypeError("Unsupported type for mul"))
+        
 
     #Return a CorrelationFunction that has been resampled to the provided type
     def resample(self, dist_type, resample_args=None):
@@ -68,9 +80,9 @@ class CorrelationFunction:
 
     #Product the x-axis, y-axis and y-error for plotting purposes
     def plotInputs(self):
-        x = np.array([self.coord(i) for i in range(self.size()) ])
-        mu = np.array([ self.value(i).mean() for i in range(self.size()) ])
-        sigma = np.array([ self.value(i).standardError() for i in range(self.size()) ])
+        x = np.array([self.coord(i) for i in range(self.size()) if self.value(i) is not None ])
+        mu = np.array([(self.value(i)).mean() for i in range(self.size()) if self.value(i) is not None ])
+        sigma = np.array([ self.value(i).standardError() for i in range(self.size()) if self.value(i) is not None ])
         return x,mu,sigma
 
     def __str__(self):

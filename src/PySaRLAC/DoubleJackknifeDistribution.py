@@ -5,6 +5,7 @@ from .JackknifeDistribution import *
 
 class DoubleJackknifeDistribution:
     def __init__(self, N_or_rawdist):
+        #if isinstance shape type then 
         if isinstance(N_or_rawdist,RawDataDistribution):
             n = N_or_rawdist.size()
             self.samples = [JackknifeDistribution(n-1) for s in range(n)]
@@ -33,6 +34,9 @@ class DoubleJackknifeDistribution:
         
     def size(self):
         return len(self.samples)
+    
+    def shape(self):
+        return [len(self.samples), self.samples[0].size()]
         
     def mean(self):
         return np.array([s.mean() for s in self.samples])

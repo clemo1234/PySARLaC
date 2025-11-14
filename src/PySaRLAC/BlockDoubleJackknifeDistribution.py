@@ -38,6 +38,9 @@ class BlockDoubleJackknifeDistribution:
 
     def sampleMatrix(self):
         return self.samples
+    
+    def shape(self):
+        return [len(self.samples), self.samples[0].size()]
         
     def size(self):
         return len(self.samples)

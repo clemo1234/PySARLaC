@@ -13,6 +13,9 @@ class Fitter:
 
     def generateCovarianceMatrix(self, cor: CorrelationFunction):
         self.cov = CorrelationFunction.covariance(cor,cor)
+    
+    def setCovarianceMatrix(self, cov):
+        self.cov = cov
 
     #kwargs are passed to curve_fit
     def fit(self, params, cor, **kwargs):

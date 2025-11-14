@@ -27,6 +27,27 @@ class JackknifeDistribution:
         out = JackknifeDistribution(self.size())
         out.samples = self.samples + r.samples
         return out
+    
+    def __sub__(self, r):
+        out = JackknifeDistribution(self.size())
+        out.samples = self.samples - r.samples
+        return out
+    
+    def __mul__(self, r):
+        
+        if isinstance(r, (float, int)):
+            out = JackknifeDistribution(self.size())
+            out.samples = self.samples * r
+            #return out
+        else:
+            out = JackknifeDistribution(self.size())
+            out.samples = self.samples * r.samples
+        
+        return out
+        
+    def __rmul__(self, scalar):
+        return self.__mul__(scalar)
+        
 
     def __truediv__(self, r):
         if(isinstance(r,float)):
