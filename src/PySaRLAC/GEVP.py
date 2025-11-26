@@ -139,8 +139,14 @@ class GEVP:
 
         for i in range(self.current_n):
             for j in range(self.size):
-                # if log gives error return nan
-                eff_result[i][j] = -(log(np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))) #-log(A/B)
+                if np.real(eig_val_t_t0[j][i]) != 0 and not np.isnan(np.real(eig_val_t_t0[j][i])) and not np.isinf(np.real(eig_val_t_t0[j][i])):
+                    val = (np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))
+                    if val > 0:
+                        eff_result[i][j] = -(log(val)) #-log(A/B)
+                else:
+                    pass
+                #eff_result[i][j] = -(log(np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i])))
+ 
 
         return eff_result 
     
@@ -290,7 +296,13 @@ class GEVP_OG:
         for i in range(self.current_n):
             for j in range(self.size):
                 # if log gives error return nan
-                eff_result[i][j] = -(log(np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))) #-log(A/B)
+                # eff_result[i][j] = -(log(np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))) #-log(A/B)
+                if np.real(eig_val_t_t0[j][i]) != 0.0:
+                    val = (np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))
+                    if val > 0:
+                        eff_result[i][j] = -(log(val)) #-log(A/B)
+                else:
+                    pass
 
         return eff_result 
     

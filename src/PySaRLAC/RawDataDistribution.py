@@ -27,7 +27,7 @@ class RawDataDistribution:
         return out
 
     def __imul__(self,r):
-        if isinstance(r, (float,np.float64)):
+        if isinstance(r, (float,np.float64,np.complex64, complex)):
             self.samples *= r
         elif isinstance(r, RawDataDistribution):
             self.samples *= r.samples
