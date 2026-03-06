@@ -24,8 +24,12 @@ class JackknifeDistribution:
         return "%f +- %f" % (self.mean(), self.standardError())
 
     def __add__(self, r):
-        out = JackknifeDistribution(self.size())
-        out.samples = self.samples + r.samples
+        if isinstance(r, JackknifeDistribution):
+            out = JackknifeDistribution(self.size())
+            out.samples = self.samples + r.samples
+        if isinstance(r, (int, float)):
+            out = JackknifeDistribution(self.size())
+            out.samples = self.samples + r
         return out
     
     def __sub__(self, r):

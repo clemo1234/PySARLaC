@@ -47,6 +47,9 @@ class BlockDoubleJackknifeDistribution:
         
     def mean(self):
         return np.array([s.mean() for s in self.samples])
+    
+    def standardError(self):
+        return np.std(self.mean) * math.sqrt(float(len(self.mean)-1))
 
     def resample(self,raw):
         nsample, nblock = self.blockCrop(raw.size(), self.block_size)

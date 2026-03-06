@@ -28,6 +28,30 @@ class CorrelationFunction:
             return out
         else:
             raise(TypeError("Unsupported type for mul"))
+    def __add__(self, scalar):
+        if isinstance(scalar, (int, float)):
+
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                out.setValue(t, self.values[t] + scalar)
+                out.setCoord(t, t)
+            return out
+        else:
+            raise(TypeError("Unsupported type for add"))
+    
+    def __radd__(self, scalar):
+        if isinstance(scalar, (int, float)):
+
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                out.setValue(t, self.values[t] + scalar)
+                out.setCoord(t, t)
+            return out
+        else:
+            raise(TypeError("Unsupported type for add"))
+
         
 
     #Return a CorrelationFunction that has been resampled to the provided type
