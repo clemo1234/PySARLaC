@@ -12,6 +12,8 @@ from .DoubleJackknifeDistribution import DoubleJackknifeDistribution
 from .BlockDoubleJackknifeDistribution import BlockDoubleJackknifeDistribution
 import matplotlib.pyplot as plt
 import math
+from numba import njit
+from numba.experimental import jitclass
 
 
 class GEVP:
@@ -178,7 +180,274 @@ class GEVP:
         return self.eff_energy(self.pre_run(t0, t, t0_1, t_1),self.pre_run(t0, t+1, t0_1, t_1))
         #return self.pre_run(N_times, t0, t)
 
-class GEVP_OG:
+# class GEVP_OG:
+
+
+#     def __init__(self, data):
+#         self.data = data
+#         self.num_ops = int(np.shape(data)[0])
+#         self.current_n = self.num_ops
+#         self.size = int(data[0][0].value(0).size())
+#         self.init_idx = np.array([])
+#         self.custom_sort = False
+
+#     def CorrelationMatrix(self, data, t0, t):
+#         """
+#         Build jackknife-resolved correlation matrices C(t0) and C(t).
+
+#         Returns
+#         -------
+#         C_t0 : ndarray
+#             Shape (n_samples, n_ops, n_ops).
+#         C_t : ndarray
+#             Shape (n_samples, n_ops, n_ops).
+#         """
+#         n_ops = int(np.shape(data)[0])
+
+#         self.num_ops = n_ops
+#         self.current_n = n_ops
+
+#         C_t0 = np.zeros((self.size, n_ops, n_ops), dtype=float)
+#         C_t = np.zeros((self.size, n_ops, n_ops), dtype=float)
+
+#         for k in range(self.size):
+#             for i in range(n_ops):
+#                 for j in range(n_ops):
+#                     # Use upper triangle if only i <= j is explicitly stored.
+#                     a, b = (i, j) if i <= j else (j, i)
+
+#                     C_t0[k, i, j] = data[a][b].value(t0)[k]
+#                     C_t[k, i, j] = data[a][b].value(t)[k]
+
+#             # Defensive symmetrization against tiny numerical asymmetries.
+#             #C_t0[k] = 0.5 * (C_t0[k] + C_t0[k].T)
+#             #C_t[k] = 0.5 * (C_t[k] + C_t[k].T)
+
+#         return C_t0, C_t
+
+#     def sortVector(self, V_init, V_current):
+
+#         V_init = np.asarray(V_init)
+#         V_current = np.asarray(V_current)
+
+#         n_vecs = V_current.shape[1]
+#         idx = []
+#         used = set()
+
+#         for i in range(n_vecs):
+#             v_ref = V_init[:, i]
+#             norm_ref = np.linalg.norm(v_ref)
+
+#             overlaps = np.full(n_vecs, -np.inf, dtype=float)
+
+#             for j in range(n_vecs):
+#                 if j in used:
+#                     continue
+
+#                 v_cur = V_current[:, j]
+#                 norm_cur = np.linalg.norm(v_cur)
+
+#                 if norm_ref == 0.0 or norm_cur == 0.0:
+#                     continue
+
+#                 # Absolute value handles arbitrary eigenvector sign flips.
+#                 overlaps[j] = abs(np.vdot(v_ref, v_cur)) / (norm_ref * norm_cur)
+
+#             best_j = int(np.argmax(overlaps))
+#             idx.append(best_j)
+#             used.add(best_j)
+
+#         return np.array(idx, dtype=int)
+
+#     def sortVector1(self, V_init, V_current, idx):
+#         """
+#         Kept for compatibility with your original class.
+
+#         If idx is supplied, return it. Otherwise sort by overlap.
+#         """
+#         if idx is not None and len(idx) != 0:
+#             return np.asarray(idx, dtype=int)
+
+#         if V_init is None or len(V_init) == 0:
+#             return np.arange(V_current.shape[1], dtype=int)
+
+#         return self.sortVector(V_init, V_current)
+
+#     def GEVP(self, C_t0, C_t):
+#         """
+#         Solve the generalized eigenvalue problem for each jackknife sample:
+
+#             C(t) v = lambda C(t0) v.
+
+#         Returns
+#         -------
+#         eigen_values : ndarray
+#             Shape (n_samples, current_n).
+#         eigen_vectors : ndarray
+#             Shape (n_samples, current_n, current_n).
+#             Eigenvectors are stored as columns in eigen_vectors[k].
+#         """
+#         n_samples = C_t0.shape[0]
+#         n = C_t0.shape[1]
+#         self.current_n = n
+
+#         eigen_values = np.zeros((n_samples, n), dtype=float)
+#         eigen_vectors = np.zeros((n_samples, n, n), dtype=float)
+
+#         for k, (Cor_t0, Cor_t) in enumerate(zip(C_t0, C_t)):
+#             # Defensive symmetrization.
+#             Cor_t0 = 0.5 * (Cor_t0 + Cor_t0.T)
+#             Cor_t = 0.5 * (Cor_t + Cor_t.T)
+
+#             try:
+#                 eigvals, eigvecs = eigh(Cor_t, Cor_t0)
+#             except np.linalg.LinAlgError:
+#                 # If C(t0) is not positive definite, return NaNs for this sample.
+#                 eigen_values[k, :] = np.nan
+#                 eigen_vectors[k, :, :] = np.nan
+#                 continue
+
+#             # Default ordering:
+#             # lambda_n ~ exp[-E_n (t - t0)], so largest lambda is lowest energy.
+#             idx = np.argsort(eigvals)[::-1]
+
+#             # Optional overlap-based sorting using reference eigenvectors.
+#             if self.custom_sort and self.init_idx is not None and len(self.init_idx) != 0:
+#                 idx = self.sortVector(self.init_idx, eigvecs)
+
+#             eigen_values[k, :] = np.real(eigvals[idx])
+#             eigen_vectors[k, :, :] = np.real(eigvecs[:, idx])
+
+#         return eigen_values, eigen_vectors
+
+#     def GEVP_init(self, C_t0, C_t):
+#         """
+#         Compute reference eigenvectors for overlap sorting.
+
+#         This replaces your original hard-coded eigen_vectors[2] choice.
+#         It uses sample 0 by default, which keeps the same general behavior but
+#         avoids choosing an arbitrary jackknife sample 2.
+
+#         If your jackknife object has a true central sample, you can modify this
+#         method to use that instead.
+#         """
+#         eigen_values, eigen_vectors = self.GEVP(C_t0, C_t)
+
+#         # Use first sample as reference.
+#         return eigen_vectors[0]
+
+#     # def Rebasing(self, C_t0, C_t, eigen_vec):
+       
+#     #     n_samples = C_t0.shape[0]
+#     #     n = C_t0.shape[1]
+#     #     n_keep = n - 1
+
+#     #     self.current_n = n_keep
+
+#     #     Cor_t0_dist_rebased = np.zeros((n_samples, n_keep, n_keep), dtype=float)
+#     #     Cor_t_dist_rebased = np.zeros((n_samples, n_keep, n_keep), dtype=float)
+
+#     #     for k, (Cor_t0, Cor_t, eigvec) in enumerate(zip(C_t0, C_t, eigen_vec)):
+#     #         V = eigvec[:, :n_keep]
+
+#     #         Cor_t0_dist_rebased[k] = V.T @ Cor_t0 @ V
+#     #         Cor_t_dist_rebased[k] = V.T @ Cor_t @ V
+
+#     #         # Defensive symmetrization.
+#     #         Cor_t0_dist_rebased[k] = 0.5 * (
+#     #             Cor_t0_dist_rebased[k] + Cor_t0_dist_rebased[k].T
+#     #         )
+#     #         Cor_t_dist_rebased[k] = 0.5 * (
+#     #             Cor_t_dist_rebased[k] + Cor_t_dist_rebased[k].T
+#     #         )
+
+#     #     return Cor_t0_dist_rebased, Cor_t_dist_rebased
+
+#     def eff_energy(self, eig_val_t_t0, eig_val_t1_t0):
+#         """
+#         Compute jackknife effective energies from generalized eigenvalues.
+
+#         Keeps your original output style:
+#             a list of JackknifeDistribution objects, one per state.
+
+#         Requires JackknifeDistribution to be defined in your environment.
+#         """
+#         n_states = eig_val_t_t0.shape[1]
+#         self.current_n = n_states
+
+#         eff_result = [JackknifeDistribution(self.size) for _ in range(n_states)]
+
+#         for state in range(n_states):
+#             for sample in range(self.size):
+#                 lam_t = np.real(eig_val_t_t0[sample, state])
+#                 lam_t1 = np.real(eig_val_t1_t0[sample, state])
+
+#                 if np.isnan(lam_t) or np.isnan(lam_t1):
+#                     eff_result[state][sample] = np.nan
+#                     continue
+
+#                 if lam_t <= 0.0 or lam_t1 <= 0.0:
+#                     eff_result[state][sample] = np.nan
+#                     continue
+
+#                 eff_result[state][sample] = -log(lam_t1 / lam_t)
+
+#         return eff_result
+
+#     def pre_run(self, t0, t):
+#         """
+#         Same usage as your original method.
+
+#         Returns
+#         -------
+#         eigenvalues : ndarray
+#             Shape (n_samples, n_ops), containing lambda_n(t,t0).
+#         """
+#         Dt = t - t0
+
+#         # Build reference eigenvectors from C(Dt) relative to C(0).
+#         # This matches the spirit of your original:
+#         #
+#         #     self.GEVP_init(*self.CorrelationMatrix(self.data, 0, Dt))
+#         #
+#         # but the internals are now safer.
+#         C_ref_t0, C_ref_t = self.CorrelationMatrix(self.data, 0, Dt)
+#         self.init_idx = self.GEVP_init(C_ref_t0, C_ref_t)
+
+#         C_t0, C_t = self.CorrelationMatrix(self.data, t0, t)
+
+#         eigen_values, eigen_vectors = self.GEVP(C_t0, C_t)
+
+#         return eigen_values
+
+#     def run(self, t0, t):
+#         """
+#         Same usage as your original method.
+
+#         Returns
+#         -------
+#         eff_result : list[JackknifeDistribution]
+#             Effective energy jackknife distributions for each state.
+#         """
+#         # Your original had:
+#         #
+#         #     self.custom_sort = sorted
+#         #
+#         # which accidentally stores Python's built-in sorted function.
+#         # This is the corrected version.
+#         self.custom_sort = False
+
+#         eig_t = self.pre_run(t0, t)
+#         eig_t1 = self.pre_run(t0, t + 1)
+
+#         return self.eff_energy(eig_t, eig_t1)
+
+
+#########################################################################
+
+
+
+class GEVP_OG_test:
     def __init__(self, data):
         self.data = data
         self.num_ops = np.shape(data)[0]
@@ -197,11 +466,11 @@ class GEVP_OG:
         into correlation matrix of size (num_ops by num_ops)
 
         returns: Correlation matrix for each jackknife sample at t and t0
+        returns k-samples of C_ij
+
         """
         self.num_ops = np.shape(data)[0]
         self.current_n = self.num_ops
-        #Cmat = np.zeros((self.num_ops,self.num_ops))
-        #Ct = np.zeros((self.num_ops,self.num_ops))
         C_mats = np.zeros((self.size,self.current_n,self.current_n))
         C_t = np.zeros((self.size,self.current_n,self.current_n))
         
@@ -214,126 +483,256 @@ class GEVP_OG:
                     else:
                         C_mats[k][i][j] = data[j][i].value(t)[k]
                         C_t[k][i][j] = data[j][i].value(t0)[k]
-            #C_mats[k] = Cmat
-            #C_t[k] = Ct
+
 
         return C_t, C_mats
-    
-    def sortVector(self, V_init, V_current):
-
-        sorted_vecs = np.empty(len(V_init))
-
-        for i, v_i in enumerate(V_init):
-            overlaps = [np.dot(v_i/norm(v_i), v/norm(v)) for v in V_current]
-            max_index = np.argmax(overlaps)
-            #print(max_index)
-            sorted_vecs[i] = max_index
-
-        return np.argsort(sorted_vecs)
-    
-    def sortVector1(self, V_init, V_current, idx):
-
-        sorted_vecs = np.empty(len(V_current))
-        if len(V_init)  == 0:
-            for i, v_i in enumerate(V_init):
-                overlaps = [np.dot(v_i/norm(v_i), v/norm(v)) for v in V_current]
-                #print out overlaps
-                max_index = np.argmax(overlaps)
-                sorted_vecs[i] = max_index
-        else:
-            sorted_vecs = idx
-
-        return np.argsort(sorted_vecs)
-
 
     def GEVP(self, C_t0, C_t):
+        """
+        C_t0 indexed by jackknife index and row and column
+        """
         eigen_values = np.zeros((self.size, self.current_n))
         eigen_vectors = np.zeros((self.size, self.current_n, self.current_n))
         #print(np.shape(eigen_values))
         for i, (Cor_t0,Cor_t) in enumerate(zip(C_t0, C_t)):
-            eigvals, eigvecs = eig(Cor_t, Cor_t0)  #replace with eig package, see if all positive values
-            idx = np.argsort(-eigvals) #Max eig value
-            #print(idx)
+            print(C_t0)
+            try:
+                eigvals, eigvecs = eigh(Cor_t, Cor_t0)  #replace with eig package, see if all positive values
+                idx = np.argsort(-eigvals) #Max eig value
+                
 
-            #sort both eigvals and eigvec
-            if self.custom_sort == True:
-                idx2 = self.sortVector(self.init_idx, eigvecs)
-            else:
-                idx2 = idx
+                eigen_values[i] = eigvals[idx]
+                eigen_vectors[i] = eigvecs[:,idx]
+            except:
+                eigen_values.fill(np.nan)
+                eigen_vectors.fill(np.nan)
 
-            eigen_values[i] = eigvals[idx2]
-            eigen_vectors[i] = eigvecs[:,idx2]
+                return eigen_values, eigen_vectors
         
         return np.real(eigen_values), np.real(eigen_vectors)
     
-    def GEVP_init(self, C_t0, C_t):
-        eigen_values = np.zeros((self.size, self.current_n))
-        eigen_vectors = np.zeros((self.size, self.current_n, self.current_n))
-        #print(np.shape(eigen_values))
-        for i, (Cor_t0,Cor_t) in enumerate(zip(C_t0, C_t)):
-            eigvals, eigvecs = eig(Cor_t, Cor_t0)  #replace with eig package, see if all positive values
-            idx = np.argsort(-eigvals) #Max eig value
 
-
-            eigen_values[i] = eigvals[idx]
-            eigen_vectors[i] = eigvecs[:,idx]
-        
-        return np.real(eigen_vectors[2])
-    
-    def Rebasing(self, C_t0, C_t, eigen_vec):
-        
-        self.current_n -= 1
-        #self.num_ops = self.current_n
-        V = eigen_vec
-        Cor_t0_dist_rebased = np.zeros((self.size,self.current_n,self.current_n))
-        Cor_t_dist_rebased = np.zeros((self.size,self.current_n,self.current_n))
-        for i, (Cor_t0, Cor_t, eigvec) in enumerate(zip(C_t0, C_t, V)):
-            Cor_t_dist_rebased[i] = eigvec[:, :self.current_n].conj().T @ Cor_t @ eigvec[:, :self.current_n]
-            Cor_t0_dist_rebased[i]= eigvec[:, :self.current_n].conj().T @ Cor_t0 @ eigvec[:, :self.current_n]
-
-
-
-        return Cor_t0_dist_rebased, Cor_t_dist_rebased
-    
     def eff_energy(self, eig_val_t_t0, eig_val_t1_t0):
         eff_result = [JackknifeDistribution(self.size) for j in range(self.current_n)]  #Unsure of class for this
 
         for i in range(self.current_n):
             for j in range(self.size):
-                # if log gives error return nan
-                # eff_result[i][j] = -(log(np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))) #-log(A/B)
                 if np.real(eig_val_t_t0[j][i]) != 0.0:
                     val = (np.real(eig_val_t1_t0[j][i])/np.real(eig_val_t_t0[j][i]))
                     if val > 0:
                         eff_result[i][j] = -(log(val)) #-log(A/B)
+                    else:
+                        eff_result[i][j] = np.nan
                 else:
-                    pass
+                    eff_result[i] = np.full(self.size, np.nan)
 
         return eff_result 
     
+    def output_Correlation_Mat(self):
+        pass
+    
     def pre_run(self, t0, t):
-        Dt = t - t0
-        self.init_idx = self.GEVP_init(*self.CorrelationMatrix(self.data, 0,Dt))
-        #print(self.init_idx)
         C1, C2 = self.CorrelationMatrix(self.data, t0, t)
-        #C3, C4 = self.CorrelationMatrix(self.data, t0_1, t_1)
 
-        #eigvals, eigvecs = self.GEVP(C3, C4)
-            
-        #C1, C2 = self.Rebasing(C1, C2, eigvecs)
-
-            
-            
-        
-        # Return final eigenvalues from last GEVP
-        #self.current_n = self.num_ops
         return self.GEVP(C1, C2)[0]
     
     def run(self, t0, t):
-        self.custom_sort = sorted
-        return self.eff_energy(self.pre_run(t0, t),self.pre_run(t0, t+1))
-        #return self.pre_run(N_times, t0, t)       
-            
+        #self.custom_sort = sorted
+        return self.eff_energy(self.pre_run(t0, t),self.pre_run(t0, t+1))  
+
+  
+
+
+class GEVP_OG:
+    def __init__(self, data):
+        self.data = data
+        self.num_ops = np.shape(data)[0]
+        self.size = data[0][0].value(0).size()
+        self.current_n = np.shape(data)[0]
+        # self.previous_eigen = np.array([])
+        self.init_idx = np.array([])
+        self.custom_sort = False
+
+        # Added: numerical cutoff for whitening C(t0)
+        self.rcond = 1e-8
+
+
+    def CorrelationMatrix(self, data, t0, t):
+        """
+        Organizes preprocessed resampled data into correlation matrices.
+
+        Returns
+        -------
+        C_t:
+            C(t0), shape (size, current_n, current_n)
+
+        C_mats:
+            C(t), shape (size, current_n, current_n)
+        """
+
+        self.num_ops = np.shape(data)[0]
+        self.current_n = self.num_ops
+
+        C_mats = np.zeros((self.size, self.current_n, self.current_n))
+        C_t = np.zeros((self.size, self.current_n, self.current_n))
+
+        for k in range(self.size):
+            for i in range(np.shape(data)[0]):
+                for j in range(np.shape(data)[0]):
+                    if i <= j:
+                        C_mats[k][i][j] = data[i][j].value(t)[k]
+                        C_t[k][i][j] = data[i][j].value(t0)[k]
+                    else:
+                        C_mats[k][i][j] = data[j][i].value(t)[k]
+                        C_t[k][i][j] = data[j][i].value(t0)[k]
+
+            # Added: force symmetry sample-by-sample
+            C_mats[k] = 0.5 * (C_mats[k] + C_mats[k].T)
+            C_t[k] = 0.5 * (C_t[k] + C_t[k].T)
+
+        return C_t, C_mats
+
+
+    def WhiteningMatrix(self, Cor_t0):
+        """
+        Compute W = C(t0)^(-1/2).
+
+        Used to convert
+
+            C(t) v = lambda C(t0) v
+
+        into the ordinary symmetric eigenvalue problem
+
+            W C(t) W u = lambda u.
+        """
+
+        Cor_t0 = 0.5 * (Cor_t0 + Cor_t0.T)
+
+        eigvals, eigvecs = eigh(Cor_t0)
+
+        max_eval = np.max(np.abs(eigvals))
+        cutoff = self.rcond * max_eval
+
+        if np.any(eigvals <= cutoff):
+            raise ValueError(
+                f"C(t0) is not positive definite. "
+                f"min eigenvalue = {np.min(eigvals)}, cutoff = {cutoff}"
+            )
+
+        inv_sqrt = 1.0 / np.sqrt(eigvals)
+
+        W = eigvecs @ np.diag(inv_sqrt) @ eigvecs.T
+
+        return W
+
+
+    def GEVP(self, C_t0, C_t):
+        """
+        Solves
+
+            C(t) v = lambda C(t0) v
+
+        for each jackknife sample.
+
+        Returns
+        -------
+        eigen_values:
+            shape (size, current_n)
+
+        eigen_vectors:
+            shape (size, current_n, current_n)
+        """
+
+        eigen_values = np.full((self.size, self.current_n), np.nan)
+        eigen_vectors = np.full((self.size, self.current_n, self.current_n), np.nan)
+
+        for i, (Cor_t0, Cor_t) in enumerate(zip(C_t0, C_t)):
+
+            Cor_t0 = 0.5 * (Cor_t0 + Cor_t0.T)
+            Cor_t = 0.5 * (Cor_t + Cor_t.T)
+
+            try:
+                W = self.WhiteningMatrix(Cor_t0)
+
+                M = W @ Cor_t @ W
+                M = 0.5 * (M + M.T)
+
+                eigvals, eigvecs_white = eigh(M)
+
+                # Sort largest eigenvalue first.
+                idx = np.argsort(eigvals)[::-1]
+
+                eigvals = eigvals[idx]
+                eigvecs_white = eigvecs_white[:, idx]
+
+                # Convert whitened eigenvectors back to generalized eigenvectors.
+                eigvecs = W @ eigvecs_white
+
+                eigen_values[i] = eigvals
+                eigen_vectors[i] = eigvecs
+
+            except ValueError:
+                # If C(t0) is bad for this sample, leave nan entries.
+                continue
+
+        return np.real(eigen_values), np.real(eigen_vectors)
+
+
+    def eff_energy(self, eig_val_t_t0, eig_val_t1_t0):
+        """
+        Computes
+
+            E_eff(t) = -log(lambda(t+1,t0) / lambda(t,t0))
+
+        Returns the original structure:
+
+            eff_result[state][jackknife_sample]
+        """
+
+        eff_result = [JackknifeDistribution(self.size) for j in range(self.current_n)]
+
+        for i in range(self.current_n):
+            for j in range(self.size):
+
+                lam_t = np.real(eig_val_t_t0[j][i])
+                lam_t1 = np.real(eig_val_t1_t0[j][i])
+
+                if np.isfinite(lam_t) and np.isfinite(lam_t1) and lam_t != 0.0:
+                    val = lam_t1 / lam_t
+
+                    if np.isfinite(val) and val > 0:
+                        eff_result[i][j] = -log(val)
+                    else:
+                        pass
+                        print(
+                            f"[Invalid effective energy] "
+                            f"state={i}, jackknife_sample={j}, "
+                            f"lambda(t)={lam_t}, lambda(t+1)={lam_t1}, "
+                            f"ratio={val}"
+                        )
+                        #eff_result[i][j] = np.nan
+
+                else:
+                    pass
+                    print(
+                        f"[Invalid eigenvalue] "
+                        f"state={i}, jackknife_sample={j}, "
+                        f"lambda(t)={lam_t}, lambda(t+1)={lam_t1}"
+                    )
+                    #eff_result[i][j] = np.nan
+
+        return eff_result
+
+
+    def pre_run(self, t0, t):
+        C1, C2 = self.CorrelationMatrix(self.data, t0, t)
+
+        return self.GEVP(C1, C2)[0]
+
+
+    def run(self, t0, t):
+        return self.eff_energy(self.pre_run(t0, t), self.pre_run(t0, t + 1))
+
 class GEVP2:
     def __init__(self, data):
         self.data = data
@@ -696,6 +1095,7 @@ class GEVP5:
         plt.grid(True, alpha=0.3)
         plt.show()
 
+
 class GEVP_bd:
     def __init__(self, data):
         self.data = data
@@ -710,7 +1110,7 @@ class GEVP_bd:
 
 
     #static method 
-
+    
     def CorrelationMatrix(self,data,t0,t):
         """
         Organizes preprocessed (resampled) data
@@ -766,25 +1166,39 @@ class GEVP_bd:
 
         return np.argsort(sorted_vecs)
 
-
+    
     def GEVP(self, C_t0, C_t):
         eigen_values = np.zeros((self.size, self.size_inner, self.current_n))
         eigen_vectors = np.zeros((self.size, self.size_inner, self.current_n, self.current_n))
         #print(np.shape(eigen_values))
         for k in range(self.size):
             for i, (Cor_t0,Cor_t) in enumerate(zip(C_t0[k], C_t[k])):
-                eigvals, eigvecs = eig(Cor_t, Cor_t0)  #replace with eig package, see if all positive values
-                idx = np.argsort(-eigvals) #Max eig value
-                #print(idx)
+                # eigvals, eigvecs = eig(Cor_t, Cor_t0)  #replace with eig package, see if all positive values
+                # idx = np.argsort(-eigvals) #Max eig value
+                # #print(idx)
 
-                #sort both eigvals and eigvec
-                if self.custom_sort == True:
-                    idx2 = self.sortVector(self.init_idx, eigvecs)
-                else:
-                    idx2 = idx
+                # #sort both eigvals and eigvec
+                # if self.custom_sort == True:
+                #     idx2 = self.sortVector(self.init_idx, eigvecs)
+                # else:
+                #     idx2 = idx
 
-                eigen_values[k][i] = eigvals[idx2]
-                eigen_vectors[k][i] = eigvecs[:,idx2]
+                # eigen_values[k][i] = eigvals[idx2]
+                # eigen_vectors[k][i] = eigvecs[:,idx2]
+
+                try:
+                    eigvals, eigvecs = eigh(Cor_t, Cor_t0)  #replace with eig package, see if all positive values
+                    idx = np.argsort(-eigvals) #Max eig value
+                        
+
+                    eigen_values[k][i] = eigvals[idx]
+                    eigen_vectors[k][i] = eigvecs[:,idx]
+                except:
+                    eigen_values.fill(np.nan)
+                    eigen_vectors.fill(np.nan)
+
+                    return eigen_values, eigen_vectors
+            
 
         #print(type(eigen_vectors))
         
@@ -861,6 +1275,8 @@ class GEVP_bd:
         #self.current_n = self.num_ops
         return self.GEVP(C1, C2)[0]
     
-    def run(self, t0, t, t0_1, t_1, rebase = True):
+    def run(self, t0, t, t0_1=0, t_1=0, rebase = True):
         self.custom_sort = sorted
         return self.eff_energy(self.pre_run(t0, t, t0_1, t_1, rebase),self.pre_run(t0, t+1, t0_1, t_1, rebase))
+
+

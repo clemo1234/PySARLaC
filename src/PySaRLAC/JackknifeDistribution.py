@@ -33,9 +33,17 @@ class JackknifeDistribution:
         return out
     
     def __sub__(self, r):
-        out = JackknifeDistribution(self.size())
-        out.samples = self.samples - r.samples
-        return out
+        #out = JackknifeDistribution(self.size())
+        #out.samples = self.samples - r.samples
+        #return out
+        if isinstance(r, JackknifeDistribution):
+            out = JackknifeDistribution(self.size())
+            out.samples = self.samples - r.samples
+            return out 
+        if isinstance(r, (int, float)):
+            out = JackknifeDistribution(self.size())
+            out.samples = self.samples - r
+            return out
     
     def __mul__(self, r):
         
@@ -63,9 +71,15 @@ class JackknifeDistribution:
     
     def sampleVector(self):
         return self.samples
+    
+    def unpack(self):
+        return self.samples
         
     def size(self):
         return len(self.samples)
+    
+    def shape(self):
+        return np.shape(self.samples)
         
     def mean(self):
         return np.mean(self.samples)

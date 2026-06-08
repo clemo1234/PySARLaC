@@ -37,6 +37,44 @@ class CorrelationFunction:
                 out.setValue(t, self.values[t] + scalar)
                 out.setCoord(t, t)
             return out
+        if isinstance(scalar, CorrelationFunction):
+
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                print(scalar.values[0])
+                print(type(scalar.values[0]))
+                out.setValue(t, self.values[t] + scalar.values[t])
+                out.setCoord(t, t)
+            return out
+        else:
+            raise(TypeError("Unsupported type for add"))
+        
+    
+    def __sub__(self, scalar):
+        if isinstance(scalar, (int, float)):
+
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                out.setValue(t, self.values[t] - scalar)
+                out.setCoord(t, t)
+            return out
+        if isinstance(scalar, CorrelationFunction):
+
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                out.setValue(t, self.values[t] - scalar.values[t])
+                out.setCoord(t, t)
+            return out
+        if hasattr(scalar, 'resample') and callable(getattr(scalar, 'resample')):
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                out.setValue(t, self.values[t] - scalar)
+                out.setCoord(t, t)
+            return out
         else:
             raise(TypeError("Unsupported type for add"))
     
@@ -48,6 +86,16 @@ class CorrelationFunction:
                 #print(self.size())
                 out.setValue(t, self.values[t] + scalar)
                 out.setCoord(t, t)
+            return out
+        if isinstance(scalar, CorrelationFunction):
+
+            out = CorrelationFunction(self.size())
+            for t in range(self.size()):
+                #print(self.size())
+                print(scalar.values[0])
+                print(type(scalar.values[0]))
+                out.setValue(t, self.values[t] + scalar.values[t])
+                out.setCoord
             return out
         else:
             raise(TypeError("Unsupported type for add"))

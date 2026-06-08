@@ -19,7 +19,7 @@ class Fitter:
 
     #kwargs are passed to curve_fit
     def fit(self, params, cor, **kwargs):
-        assert self.cov != None
+        assert type(self.cov) != type(None)
         n = cor.value(0).size()
         T = cor.size()
         assert len(self.cov) == T

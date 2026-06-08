@@ -41,6 +41,9 @@ class BlockDoubleJackknifeDistribution:
     
     def shape(self):
         return [len(self.samples), self.samples[0].size()]
+    
+    def unpack(self):
+        return np.array([s.unpack() for s in self.samples])
         
     def size(self):
         return len(self.samples)

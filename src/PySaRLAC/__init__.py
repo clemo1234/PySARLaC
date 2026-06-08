@@ -10,3 +10,4 @@ from .Fit import *
 from .FitFunc import *
 from .EffectiveMass import *
 from .GEVP import *
+from .load_data import *
